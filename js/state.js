@@ -1,5 +1,5 @@
 // The shared app state object (S), saving, and small queries on it.
-import { KD, KT } from './config.js';
+import { KD, KT, THEMES, TYPES } from './config.js';
 import { getUser, load } from './storage.js';
 import { nextDays, now, todayIso } from './utils.js';
 
@@ -8,11 +8,17 @@ export const save=()=>{try{localStorage.setItem(KD,JSON.stringify({items:S.items
 const D=load();
 
 export const S={...D,user:getUser(),mode:'home',view:'next',cur:{y:now.getFullYear(),m:now.getMonth()},sel:{grade:7,section:'Ruby'},
- tab:'teacher',ld:{grade:7,section:'Ruby',name:'',username:'',password:'',agree:false},loginErr:'',modal:null,error:'',panel:null,privacy:false};
+ tab:'teacher',ld:{grade:7,section:'Ruby',name:'',username:'',password:'',agree:false},loginErr:'',modal:null,error:'',panel:null,privacy:false,settings:false,theme:'light'};
 
 if(S.user&&S.user.role==='scholar')S.sel={grade:S.user.grade,section:S.user.section};
 
-try{const t=localStorage.getItem(KT);if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark')}catch(e){}
+export function applyTheme(id){
+  if(!THEMES.some(t=>t.id===id))id='light';
+  S.theme=id;document.documentElement.dataset.theme=id;
+  try{localStorage.setItem(KT,id)}catch(e){}
+}
+// First visit: follow the device's light/dark setting. Afterwards: the saved choice.
+applyTheme((()=>{try{const t=localStorage.getItem(KT);if(THEMES.some(x=>x.id===t))return t}catch(e){}return matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'})());
 
 save();
 
@@ -24,7 +30,7 @@ export const itemsOn=(d,k)=>S.items.filter(i=>i.date===d&&i.sec===(k||secKey()))
 
 export const evOn=d=>S.events.filter(e=>e.date===d),holidayOn=d=>evOn(d).find(e=>e.kind==='holiday');
 
-export const canEdit=it=>isT()&&it.date>todayIso&&(isA()||it.type==='project'||nextDays.includes(it.date));
+export const canEdit=it=>isT()&&it.date>todayIso&&(isA()||TYPES[it.type].ahead||nextDays.includes(it.date));
 
 export const pref=id=>((S.prefs[S.user.name]||{})[id])||{st:'todo',bell:false};
 

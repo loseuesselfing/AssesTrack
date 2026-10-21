@@ -8,7 +8,7 @@ export function homeView(){
  const k=secKey(),end=iso(addDays(now,14)),its=S.items.filter(i=>i.sec===k&&i.date>=todayIso&&i.date<=end);
  const dates=[...new Set([todayIso,...its.map(i=>i.date),...S.events.filter(e=>e.date>=todayIso&&e.date<=end).map(e=>e.date)])].sort();
  const soon=its.filter(i=>{const p=pref(i.id);return p.bell&&p.st!=='done'&&i.date<=tomorrowIso}).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
- const banner=soon.length?`<div class="mt-5 bg-amber-50 border border-amber-300 text-amber-900 rounded-xl px-4 py-3" role="alert"><p class="font-bold">🔔 Reminders</p>${soon.map(i=>`<p class="text-sm mt-1"><b>${esc(i.subject)}</b> ${TYPES[i.type].label.toLowerCase()} ${i.date===todayIso?'today':'tomorrow'} at ${fmtT(i.time)}</p>`).join('')}</div>`:'';
+ const banner=soon.length?`<div class="mt-5 bg-amber-50 border border-amber-300 text-amber-900 rounded-xl px-4 py-3" role="alert"><p class="font-bold">🔔 Reminders</p>${soon.map(i=>`<p class="text-sm mt-1"><b>${esc(i.subject)}</b> ${TYPES[i.type].label} ${i.date===todayIso?'today':'tomorrow'} at ${fmtT(i.time)}</p>`).join('')}</div>`:'';
  const row=it=>`<div class="bg-white border border-[var(--line)] rounded-xl p-3 flex flex-wrap items-center gap-3 ${pref(it.id).st==='done'?'opacity-60':''}">
   <span class="w-1.5 self-stretch rounded ${TYPES[it.type].bar}"></span>
   <div class="flex-1 min-w-[200px]"><button onclick="openPanel('${it.id}')" class="text-left font-bold hover:underline">${esc(it.subject)}</button>

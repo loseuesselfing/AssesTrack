@@ -1,16 +1,23 @@
 // Everything a user can do: log in, navigate, add, move, remove, comment, react.
 // main.js exposes these to the inline onclick/onsubmit handlers in the views.
-import { ACC, KT, KU, MAX, SECTIONS, TYPES } from './config.js';
+import { ACC, KU, MAX, SECTIONS, TYPES } from './config.js';
 import { render } from './render.js';
 import { bestDays, createItems } from './rules.js';
-import { S, canEdit, holidayOn, isT, itemsOn, logit, pref, save, secKey } from './state.js';
+import { S, applyTheme, canEdit, holidayOn, isT, itemsOn, logit, pref, save, secKey } from './state.js';
 import { seed } from './storage.js';
 import { addDays, allowed, fmtD, nextDays, nextMon, now, pd, secName, toast, uid } from './utils.js';
 import { sugHtml } from './views/shared.js';
 
 export function setPref(id,p){const u=S.prefs[S.user.name]=S.prefs[S.user.name]||{};u[id]={...pref(id),...p};save();render()}
 
-export function toggleTheme(){const d=document.documentElement.classList.toggle('dark');try{localStorage.setItem(KT,d?'dark':'light')}catch(e){}render()}
+export function setTheme(id){applyTheme(id);render()}
+export const openSettings=()=>{S.settings=true;S.settingsFresh=true;render()},closeSettings=()=>{S.settings=false;render()};
+// Header button: jump to Dark, and back to the theme you had before.
+export function toggleDark(){
+  if(S.theme==='dark')applyTheme(S.prevTheme&&S.prevTheme!=='dark'?S.prevTheme:'light');
+  else{S.prevTheme=S.theme;applyTheme('dark')}
+  render();
+}
 
 export function suggestForm(b){const f=b.closest('form'),secs=[...f.querySelectorAll('[name=sec]:checked')].map(x=>x.value);document.getElementById('sug').innerHTML=sugHtml(bestDays(f.elements.type.value,S.sel.grade,secs.length?secs:[S.sel.section]))}
 
@@ -24,7 +31,7 @@ export function login(e){
  S.loginErr='';S.mode='home';localStorage.setItem(KU,JSON.stringify(S.user));render();
 }
 
-export function logout(){S.user=null;S.modal=null;S.panel=null;localStorage.removeItem(KU);render()}
+export function logout(){S.user=null;S.modal=null;S.panel=null;S.settings=false;localStorage.removeItem(KU);render()}
 
 export const selGrade=g=>{S.sel={grade:+g,section:SECTIONS[g][0]};render()},selSec=s=>{S.sel.section=s;render()};
 
@@ -44,7 +51,7 @@ export function openAdd(date){
  if(!isT())return;
  if(date&&holidayOn(date))return toast(`${holidayOn(date).title} is a holiday. No assessments.`,'error');
  if(date&&itemsOn(date).length>=MAX)return toast(`${secName(secKey())} already has ${MAX} assessments that day.`,'error');
- S.modal={draft:{date:date||nextDays[0],type:date&&!nextDays.includes(date)?'project':'quiz',secs:[S.sel.section],subject:'',time:'08:00',description:''}};S.error='';render();
+ S.modal={draft:{date:date||nextDays[0],type:date&&!nextDays.includes(date)?'aa':'fa',secs:[S.sel.section],subject:'',time:'08:00',description:''}};S.error='';render();
  setTimeout(()=>{const s=document.getElementById('f-sub');if(s)s.focus()},30);
 }
 
@@ -61,7 +68,7 @@ export async function submitItem(e){
  if(!f.secs.length)return fail('Choose at least one section.');
  if(!f.date)return fail('Choose a date.');
  if(holidayOn(f.date))return fail(`${holidayOn(f.date).title} is a holiday. Choose another date.`);
- if(!allowed(f.type,f.date))return fail(f.type==='project'?'Projects need a due date after today.':`Quizzes and tasks can only be scheduled for next week (${fmtD(nextMon)} to ${fmtD(addDays(nextMon,4))}). Choose Project for later dates.`);
+ if(!allowed(f.type,f.date))return fail(TYPES[f.type].ahead?'AA needs a due date after today.':`${TYPES[f.type].label} can only be scheduled for next week (${fmtD(nextMon)} to ${fmtD(addDays(nextMon,4))}). Choose AA for later dates.`);
  const full=f.secs.filter(s=>itemsOn(f.date,grade+'|'+s).length>=MAX);
  if(full.length){S.modal.blocked=full;toast('Daily limit reached. Nothing was saved.','error');return fail(`Blocked: ${full.join(', ')} already ${full.length>1?'have':'has'} ${MAX} assessments on ${fmtD(pd(f.date))}, the daily limit. Pick one of the suggested days, or request an exception.`)}
  const dup=f.secs.filter(s=>itemsOn(f.date,grade+'|'+s).some(i=>i.subject.toLowerCase()===f.subject.toLowerCase()));
@@ -70,7 +77,7 @@ export async function submitItem(e){
  if(files.some(x=>x.size>700*1024))return fail('Each file must be under 700 KB (browser storage is limited).');
  const att=await Promise.all(files.map(readFile)),c=createItems(f,grade,S.user.name,att);
  if(!save()){S.items=S.items.filter(i=>!c.includes(i));S.log.splice(0,c.length);return fail('Browser storage is full. Remove some entries or attach smaller files.')}
- S.modal=null;S.error='';toast(`${f.subject} ${TYPES[f.type].label.toLowerCase()} scheduled for ${f.secs.length} section${f.secs.length>1?'s':''}.`);render();
+ S.modal=null;S.error='';toast(`${f.subject} ${TYPES[f.type].label} scheduled for ${f.secs.length} section${f.secs.length>1?'s':''}.`);render();
 }
 
 export function requestException(){
@@ -89,7 +96,7 @@ export function decide(id,ok){
 export function moveItem(e,id){
  e.preventDefault();const it=S.items.find(i=>i.id===id),nd=new FormData(e.target).get('date'),bad=m=>toast(m,'error');
  if(!nd||nd===it.date)return bad('Pick a different date.');
- if(!allowed(it.type,nd))return bad(it.type==='project'?'Pick a date after today.':'Quizzes and tasks can only move within next week.');
+ if(!allowed(it.type,nd))return bad(TYPES[it.type].ahead?'Pick a date after today.':`${TYPES[it.type].label} can only move within next week.`);
  if(holidayOn(nd))return bad(`${holidayOn(nd).title} is a holiday.`);
  if(itemsOn(nd,it.sec).length>=MAX)return bad(`${secName(it.sec)} is already full on ${fmtD(pd(nd))}. Try a suggested day.`);
  const old=it.date;it.moves=it.moves||[];it.moves.push({from:old,to:nd,by:S.user.name,at:new Date().toISOString()});it.date=nd;
@@ -97,7 +104,7 @@ export function moveItem(e,id){
 }
 
 export function removeItem(id){
- const it=S.items.find(i=>i.id===id);if(!it||!canEdit(it)||!confirm(`Remove ${it.subject} ${TYPES[it.type].label.toLowerCase()}?`))return;
+ const it=S.items.find(i=>i.id===id);if(!it||!canEdit(it)||!confirm(`Remove ${it.subject} ${TYPES[it.type].label}?`))return;
  S.items=S.items.filter(i=>i.id!==id);logit('Removed',`${it.subject} ${TYPES[it.type].label} (${secName(it.sec)}) on ${fmtD(pd(it.date))}`,id);save();S.panel=null;toast('Assessment removed.');render();
 }
 

@@ -1,4 +1,5 @@
 // Date and time helpers, formatting, HTML escaping, ids and toast messages.
+import { TYPES } from './config.js';
 
 export const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 
@@ -28,7 +29,7 @@ export const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,
 
 export const secName=k=>{const[g,s]=k.split('|');return'Grade '+g+' · '+s};
 
-export const allowed=(type,d)=>type==='project'?d>todayIso:nextDays.includes(d);
+export const allowed=(type,d)=>TYPES[type].ahead?d>todayIso:nextDays.includes(d);
 
 let tt;
 
