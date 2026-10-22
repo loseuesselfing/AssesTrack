@@ -1,6 +1,57 @@
 const { Client } = require('pg');
 const bcrypt = require('bcryptjs');
 
+// Auto-creates missing tables if they don't exist yet
+async function initDb(client) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      full_name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash VARCHAR(255) NOT NULL,
+      role VARCHAR(50) DEFAULT 'scholar',
+      grade_level VARCHAR(50),
+      section VARCHAR(50),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS assessments (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      type VARCHAR(50) NOT NULL,
+      subject VARCHAR(100) NOT NULL,
+      grade_level VARCHAR(50) NOT NULL,
+      section VARCHAR(50) NOT NULL,
+      date DATE NOT NULL,
+      created_by INT REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS holidays (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      date DATE UNIQUE NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS exception_requests (
+      id SERIAL PRIMARY KEY,
+      assessment_id INT REFERENCES assessments(id),
+      teacher_id INT REFERENCES users(id),
+      status VARCHAR(50) DEFAULT 'pending',
+      reason TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_history (
+      id SERIAL PRIMARY KEY,
+      user_id INT REFERENCES users(id),
+      action VARCHAR(255) NOT NULL,
+      details TEXT,
+      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+}
+
 exports.handler = async (event, context) => {
   const client = new Client({
     connectionString: process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL,
@@ -9,15 +60,16 @@ exports.handler = async (event, context) => {
 
   try {
     await client.connect();
-    const path = event.path.replace(/\/\.netlify\/functions\/api\/?/, '');
+    await initDb(client); // Run automatic table check/creation
+
+    const path = event.path.replace(/\/\.netlify\/functions\/api\/?/, '').replace(/^api\/?/, '');
     const method = event.httpMethod;
     const body = event.body ? JSON.parse(event.body) : {};
 
-    // 1. Admin Sign-In Handler
+    // 1. Admin / User Sign-In Handler
     if (path === 'login' && method === 'POST') {
       const { username, email, password } = body;
 
-      // Admin Bypass check from Netlify Environment Variables
       if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_INITIAL_PASSWORD) {
         await client.end();
         return {
@@ -30,7 +82,6 @@ exports.handler = async (event, context) => {
         };
       }
 
-      // Standard User Sign-In
       const res = await client.query('SELECT * FROM users WHERE email = $1', [email]);
       if (res.rows.length === 0) {
         await client.end();
@@ -75,7 +126,6 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Default Fallback
     await client.end();
     return { statusCode: 404, body: JSON.stringify({ message: "Endpoint not found" }) };
 
