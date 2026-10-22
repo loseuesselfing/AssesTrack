@@ -1,4 +1,4 @@
-// Constants: daily limit, assessment types, grade sections, subject lists, demo accounts.
+// Constants: daily limit, assessment types, grade sections, subject lists, sign-up rules.
 
 export const MAX=3,DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday'];
 
@@ -9,8 +9,6 @@ export const TYPES={
  fa:{label:'FA',short:'FA',w:1,ahead:false,chip:'bg-sky-100 text-sky-800 border-sky-300',bar:'bg-sky-500'},
  long:{label:'Long quiz',short:'LQ',w:2,ahead:false,chip:'bg-violet-100 text-violet-800 border-violet-300',bar:'bg-violet-600'},
  aa:{label:'AA',short:'AA',w:2,ahead:true,chip:'bg-rose-100 text-rose-800 border-rose-300',bar:'bg-rose-500'}};
-// Older saved data used these names. They are converted when loaded.
-export const LEGACY_TYPES={quiz:'fa',task:'aa',project:'aa'};
 
 export const SECTIONS={7:['Ruby','Diamond','Emerald'],8:['Waling waling','Jasmin','Sampaguita'],9:['Lithium','Sodium','Potassium'],10:['Graviton','Muon','Gluon'],11:['Polaris','Sirius','Rigel'],12:['A','B','C']};
 
@@ -19,13 +17,11 @@ const core=n=>['Mathematics '+n,'Computer Science '+n,'English '+n,'Filipino '+n
 export const SUBJECTS={7:['Integrated Science 1',...core(1),'Art, Drafting & Technology 1','PE, Health & Music 1'],8:['Integrated Science 2',...core(2),'Art, Drafting & Technology 2','PE, Health & Music 2'],
  9:['Biology 1','Chemistry 1','Physics 1',...core(3)],10:['Biology 2','Chemistry 2','Physics 2',...core(4)],11:[],12:[]};
 
-export const ACC={teacher:{pw:'teacher123',name:'Ms. Dela Cruz'},admin:{pw:'admin123',name:'Admin Office'},scholar:{pw:'scholar123'}};
-
 export const ROLE={teacher:'Teacher',admin:'Admin',scholar:'Scholar'};
 
 export const BADGE={teacher:'Teacher: can schedule',admin:'Admin: full oversight',scholar:'Scholar / Staff: view only'};
 
-export const EMOJI=['👍','✅','👀','😰'],KD='assestrack_v3',KU='assestrack_user_v3',KT='assestrack_theme';
+export const EMOJI=['👍','✅','👀','😰'],KT='assestrack_theme';
 // Themes: id matches a [data-theme] block in css/styles.css; swatch = [page colour, accent] for the picker.
 export const THEMES=[
   {id:'light',label:'Light',swatch:['#F2F4F7','#1F4FD8'],desc:'Clean blue and white.'},
@@ -35,3 +31,9 @@ export const THEMES=[
   {id:'sunset',label:'Sunset',swatch:['#FFF4E8','#C93D14'],desc:'Warm cream with a plum-to-orange header.'}];
 
 export const EVC={holiday:'bg-red-50 text-red-800 border-red-300',event:'bg-blue-50 text-blue-900 border-blue-200'};
+
+// Sign-up rules (the server enforces them too).
+export const ZRC_DOMAIN='@zrc.pshs.edu.ph',ZRC_EMAIL=/^[^\s@]+@zrc\.pshs\.edu\.ph$/i,MIN_PASSWORD=8;
+
+// Tables the admin can browse (read-only) in the Database tab. Must match docs/API.md.
+export const DB_TABLES=['users','assessments','attachments','comments','reactions','progress','events','exception_requests','audit_log'];

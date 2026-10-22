@@ -7,7 +7,10 @@ export const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return
 
 const mondayOf=d=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());const w=x.getDay();return addDays(x,w===0?-6:1-w)};
 
-export const now=new Date(),todayIso=iso(now),tomorrowIso=iso(addDays(now,1)),thisMon=mondayOf(now),nextMon=addDays(thisMon,7);
+// "Today" in the school's time zone (Asia/Manila), so every device and the server agree on the date.
+const manilaToday=()=>{const[y,m,d]=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila'}).format(new Date()).split('-').map(Number);return new Date(y,m-1,d,12)};
+
+export const now=manilaToday(),todayIso=iso(now),tomorrowIso=iso(addDays(now,1)),thisMon=mondayOf(now),nextMon=addDays(thisMon,7);
 
 export const nextDays=Array.from({length:5},(_,i)=>iso(addDays(nextMon,i)));
 

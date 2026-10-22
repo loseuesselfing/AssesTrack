@@ -1,17 +1,14 @@
-// The shared app state object (S), saving, and small queries on it.
-import { KD, KT, THEMES, TYPES } from './config.js';
-import { getUser, load } from './storage.js';
+// The shared app state object (S) and small queries on it. The data itself comes from the server (docs/API.md).
+import { KT, THEMES, TYPES } from './config.js';
 import { nextDays, now, todayIso } from './utils.js';
 
-export const save=()=>{try{localStorage.setItem(KD,JSON.stringify({items:S.items,log:S.log,events:S.events,reqs:S.reqs,prefs:S.prefs}));return true}catch(e){return false}};
+export const S={items:[],log:[],events:[],reqs:[],prefs:{},user:null,ready:false,version:'',
+ mode:'home',view:'next',cur:{y:now.getFullYear(),m:now.getMonth()},sel:{grade:7,section:'Ruby'},
+ tab:'signin',ld:{identifier:'',password:'',fullName:'',email:'',agree:false,grade:7,section:'Ruby'},loginErr:'',
+ modal:null,error:'',panel:null,privacy:false,settings:false,settingsPage:null,theme:'light',
+ adminTab:'users',admin:{users:null,table:null,tempPw:null}};
 
-const D=load();
-
-export const S={...D,user:getUser(),mode:'home',view:'next',cur:{y:now.getFullYear(),m:now.getMonth()},sel:{grade:7,section:'Ruby'},
- tab:'teacher',ld:{grade:7,section:'Ruby',name:'',username:'',password:'',agree:false},loginErr:'',modal:null,error:'',panel:null,privacy:false,settings:false,theme:'light'};
-
-if(S.user&&S.user.role==='scholar')S.sel={grade:S.user.grade,section:S.user.section};
-
+// Theme is the one thing kept in this browser: it is a personal preference, not shared data.
 export function applyTheme(id){
   if(!THEMES.some(t=>t.id===id))id='light';
   S.theme=id;document.documentElement.dataset.theme=id;
@@ -19,8 +16,6 @@ export function applyTheme(id){
 }
 // First visit: follow the device's light/dark setting. Afterwards: the saved choice.
 applyTheme((()=>{try{const t=localStorage.getItem(KT);if(THEMES.some(x=>x.id===t))return t}catch(e){}return matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'})());
-
-save();
 
 export const isA=()=>S.user&&S.user.role==='admin',isT=()=>S.user&&S.user.role!=='scholar';
 
@@ -35,5 +30,3 @@ export const canEdit=it=>isT()&&it.date>todayIso&&(isA()||TYPES[it.type].ahead||
 export const pref=id=>((S.prefs[S.user.name]||{})[id])||{st:'todo',bell:false};
 
 export const recentMove=it=>{const m=(it.moves||[]).slice(-1)[0];return m&&Date.now()-new Date(m.at)<72*36e5?m:null};
-
-export function logit(act,txt,id){S.log.unshift({at:new Date().toISOString(),who:S.user.name,role:S.user.role,act,txt,id});S.log=S.log.slice(0,300)}

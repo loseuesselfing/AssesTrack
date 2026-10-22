@@ -6,14 +6,14 @@ import { esc, fmtAt, fmtLong, fmtT, secName, tomorrowIso } from '../utils.js';
 import { chipT, movedChip, statusCtl, sugHtml } from './shared.js';
 
 export function panelView(){
- const it=S.items.find(i=>i.id===S.panel);if(!it)return'';const me=S.user.name,[g,s]=it.sec.split('|');
- const files=it.files.map(f=>`<a href="${f.data}" download="${esc(f.name)}" class="flex items-center justify-between border border-[var(--line)] rounded-lg px-3 py-2 text-sm font-semibold hover:bg-blue-50"><span class="truncate">${esc(f.name)}</span><span class="text-[var(--brand)] ml-2">Download</span></a>`).join('');
+ const it=S.items.find(i=>i.id===S.panel);if(!it)return'';const anim=S.panelFresh?'slide':'';S.panelFresh=false;const me=S.user.name,[g,s]=it.sec.split('|');
+ const files=it.files.map(f=>`<a href="/api/files/${f.id}" download="${esc(f.name)}" class="flex items-center justify-between border border-[var(--line)] rounded-lg px-3 py-2 text-sm font-semibold hover:bg-blue-50"><span class="truncate">${esc(f.name)}</span><span class="text-[var(--brand)] ml-2">Download</span></a>`).join('');
  const reacts=EMOJI.map(em=>{const l=it.reactions[em]||[],on=l.includes(me);return`<button onclick="react('${it.id}','${em}')" title="${esc(l.join(', '))}" class="border rounded-full px-3 py-1.5 text-sm font-bold ${on?'bg-blue-100 border-[var(--brand)]':'bg-white border-[var(--line)] hover:bg-slate-50'}">${em} ${l.length||''}</button>`}).join('');
  const cms=it.comments.map(c=>`<div class="bg-[#F2F4F7] rounded-lg px-3 py-2"><p class="text-xs"><b>${esc(c.author)}</b> <span class="${c.role!=='scholar'?'text-emerald-700':'text-[var(--muted)]'} font-semibold">${ROLE[c.role]}</span> · ${fmtAt(c.at)}</p><p class="text-sm mt-1 whitespace-pre-wrap">${esc(c.text)}</p></div>`).join('');
  const hist=isT()?S.log.filter(l=>l.id===it.id):[];
  const move=canEdit(it)?`<form onsubmit="moveItem(event,'${it.id}')"><h3 class="font-bold text-sm mb-2">Move this ${TYPES[it.type].label}</h3><div class="flex gap-2"><input type="date" name="date" min="${tomorrowIso}" value="${it.date}" class="inp" style="margin-top:0"><button class="px-4 rounded-lg font-bold text-white bg-[var(--brand)]">Move</button></div>
   <div class="flex flex-wrap gap-2 mt-2">${sugHtml(bestDays(it.type,+g,[s],it.date))}</div></form>`:'';
- return`<div class="fixed inset-0 z-50 bg-slate-900/40 flex justify-end" onclick="if(event.target===this)closePanel()"><aside class="slide bg-white w-full sm:w-[460px] h-full flex flex-col shadow-2xl" role="dialog" aria-modal="true" aria-label="Assessment details">
+ return`<div class="fixed inset-0 z-50 bg-slate-900/40 flex justify-end" onclick="if(event.target===this)closePanel()"><aside class="${anim} bg-white w-full sm:w-[460px] h-full flex flex-col shadow-2xl" role="dialog" aria-modal="true" aria-label="Assessment details">
  <header class="p-5 border-b border-[var(--line)]"><div class="flex justify-between gap-3"><h2 class="fh font-bold text-2xl leading-tight">${esc(it.subject)}</h2><button onclick="closePanel()" class="text-2xl leading-none px-2" aria-label="Close">×</button></div>
   <div class="flex flex-wrap gap-1.5 mt-2">${chipT(it.type)}${movedChip(it)}</div><p class="mt-3 font-semibold">${fmtLong(it.date)}</p><p class="text-[var(--brand)] font-bold">${fmtT(it.time)} · ${secName(it.sec)}</p>
   <p class="text-xs text-[var(--muted)] mt-2">Posted by ${esc(it.teacher)} on ${fmtAt(it.createdAt)}</p></header>

@@ -1,96 +1,78 @@
 # AssesTrack
 
-Weekly assessment scheduler for PSHS-ZRC. Teachers schedule FA, long quizzes and AA;
-scholars see what is due for their own section. School policy is enforced automatically:
-**no section may have more than 3 assessments on one day.**
+The weekly assessment scheduler for PSHS-ZRC. Teachers schedule FA, long quizzes and AA for each section;
+scholars see what is due for their own section; an admin oversees everything.
+School policy is enforced automatically: **no section may have more than 3 assessments on one day.**
 
-This is a front-end demo. Data is saved in each browser's `localStorage`; there is no server yet.
+Everyone shares one database, so what one person adds or changes appears for everyone else
+(the page checks for changes every 45 seconds and whenever you return to the tab).
 
-## Run it
+## How it is built
 
-The JavaScript uses ES modules, so opening `index.html` by double-click will not work.
+- **Front-end:** this repo's `index.html`, `css/` and `js/` (plain ES modules, Tailwind from a CDN, no build step).
+- **Server:** Netlify Functions in `netlify/functions` and a Netlify Database (Postgres) with migrations in `netlify/database`, built to the contract in [`docs/API.md`](docs/API.md).
+- **Files:** attachments live in Netlify Blobs.
+- The only thing kept in your browser is your theme choice.
 
-1. Open this folder in VS Code.
-2. Install the **Live Server** extension.
-3. Right-click `index.html` and choose **Open with Live Server**.
+## Accounts
 
-No Live Server? From this folder run `python -m http.server 8000` and open http://localhost:8000.
-
-To publish free: push to GitHub, then Settings, Pages, deploy from the `main` branch root.
-
-## Demo accounts
-
-| Role | Username | Password |
-|------|----------|----------|
-| Teacher | `teacher` | `teacher123` |
-| Admin | `admin` | `admin123` |
-| Scholar / Staff | any name, pick grade and section | `scholar123` |
-
-## Themes
-
-Click the **gear icon** (top right, also on the sign-in page) to open Settings. It holds the theme choice, your account and the Data Privacy Notice. The ☾ Dark / ☀ Light button in the header (and on the sign-in page) jumps straight to Dark and back to your previous theme. Your choice is remembered.
-
-| Theme | Look |
-|-------|------|
-| Light | Clean blue and white (default) |
-| Dark | Navy dark mode; first visit follows your device setting |
-| Forest | Warm cream paper, deep green, serif headings |
-| Blueprint | Dark engineering-paper blue with grid lines, cyan accent, monospace headings, square corners |
-| Sunset | Warm cream with a plum-to-orange header, rounder shapes |
-
-To add a theme: copy a `[data-theme=...]` block in `css/styles.css`, change the variables, then add `{id, label, swatch}` to `THEMES` in `js/config.js`. Keep text contrast at 4.5:1 or better.
+- **Sign up** needs your full name, your ZRC email (`@zrc.pshs.edu.ph` only) and a password of at least 8 characters.
+  An email that is already registered is refused with a clear message.
+- New accounts are **Scholars**. After signing up you choose your grade level and section once; only an admin can change it later.
+- The **admin** switches teachers to the Teacher role in the Admin panel. There is exactly one admin account; its username and
+  password come from the Netlify environment variables `ADMIN_USERNAME` and `ADMIN_INITIAL_PASSWORD` (never put them in this repo).
+  The admin signs in with the username; everyone else uses their email.
+- **Passwords are hashed.** Nobody, including the admin, can read them. The admin can reset one, which shows a temporary password once.
 
 ## Rules
 
-- Max 3 assessments per day for each section. A subject counts once per day.
-- FA and Long quiz: next week only. AA: any later date (so projects and longer tasks can be planned ahead).
+- Max 3 assessments per section per day. A subject counts once per day.
+- FA and Long quiz: next week only. AA: any later date.
 - No assessments on holidays (the admin manages holidays and events).
-- The heatmap shades each section and day by workload, not just count: FA is light (counts 1); Long quiz and AA are heavy (count 2). Levels are Free, Light, Moderate, Busy and Heavy, and each cell lists what is scheduled. The weights are in `TYPES` in `js/config.js`.
-- Best-day suggestions prefer the lightest days.
+- The heatmap shades by workload: FA counts 1; Long quiz and AA count 2.
 - If a day is full, teachers can request an exception; the admin approves, denies or overrides.
+
+## Settings (gear icon, top right)
+
+A menu with **Profile** (your details and change password), **Appearance** (five themes) and **Data Privacy Act**.
+The Dark / Light button in the header jumps straight to Dark and back.
+
+## Admin panel
+
+Users (roles, sections, reset password, delete), Database (read-only view of every table), Calendar (holidays and events),
+Requests (exception requests) and History (who changed what, and when).
+
+## Run, test, deploy
+
+- Deploy: connect this repo to a Netlify site, then set `ADMIN_USERNAME` and `ADMIN_INITIAL_PASSWORD` under Site configuration, Environment variables.
+- Local server: `netlify dev` (needs the Netlify CLI).
+- Tests: `npm test` runs the real front-end against a reference server (`tests/mock-api.mjs`) that mirrors `docs/API.md`.
 
 ## Folder map
 
 ```
-index.html            page shell, loads Tailwind (CDN) and js/main.js
-css/styles.css        the five themes (as CSS variables), heatmap colours
+index.html            page shell
+css/styles.css        the five themes (CSS variables), heatmap colours
 js/
-  main.js             entry point, exposes actions to inline handlers
-  config.js           constants: limit, types, sections, subjects, accounts
-  utils.js            dates, formatting, escaping, toast
-  storage.js          demo seed data, loading from localStorage
-  state.js            shared state object S, saving, queries
-  rules.js            best-day suggestions, creating assessments
-  actions.js          everything a user can do (log in, add, move, comment...)
-  render.js           chooses login or dashboard
-  views/              one file per screen or piece of UI
-    shared.js  login.js  privacy.js  dashboard.js  home.js  week.js
-    month.js   heat.js   admin.js    modal.js      panel.js    settings.js
+  main.js             entry point; exposes actions to inline handlers; refreshes shared data
+  api.js              talks to the server
+  config.js           constants: limit, types, sections, subjects, sign-up rules
+  utils.js            dates (Asia/Manila), formatting, escaping, toast
+  state.js            the shared state object S and small queries
+  rules.js            workload weight and best-day suggestions
+  actions.js          everything a user can do
+  render.js           chooses loading, sign-in, first-time setup or the dashboard
+  views/              one file per screen
+docs/API.md           the contract the server must follow
+tests/                reference server and front-end tests
 ```
 
 ## Where to change things
 
 | To change... | Edit |
 |--------------|------|
-| The daily limit, sections, subject lists, demo accounts | `js/config.js` |
-| Scheduling or lock rules | `js/actions.js` (`submitItem`, `moveItem`), `js/rules.js` |
+| The daily limit, sections, subject lists | `js/config.js` (and the matching rule on the server) |
+| Assessment types, heatmap weights, which can be scheduled ahead | `js/config.js` (`TYPES`) |
 | A screen's layout | the matching file in `js/views/` |
-| Assessment types (FA, Long quiz, AA), their heatmap weight, and which can be scheduled ahead | `js/config.js` (`TYPES`) |
-| Colours and the five themes | `css/styles.css` (variables per theme), `THEMES` in `js/config.js` |
-| Demo data | `js/storage.js` |
+| Colours and themes | `css/styles.css` and `THEMES` in `js/config.js` |
 | Grades 11 and 12 subjects | `js/config.js`, `SUBJECTS` (currently empty) |
-
-## How the code fits together
-
-- `state.js` holds one object, `S`. Views read it and return HTML strings; `render()` redraws the page.
-- `actions.js` changes `S`, saves, then calls `render()`.
-- Views use inline `onclick="..."` handlers. `main.js` copies every export of `actions.js` onto `window` so they work.
-- Views never import `actions.js` or `render.js`, which keeps the import graph free of cycles.
-
-## Known limits
-
-- Saved data from older versions is converted automatically (Quiz to FA, Task and Project to AA).
-- No shared backend: teachers on different computers do not see each other's changes.
-- Attached files are stored in the browser (max 3 per entry, 700 KB each).
-- Reminders only show while the page is open.
-- The Data Privacy Notice (RA 10173) is a template; the school's Data Protection Officer should review it.
